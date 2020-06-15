@@ -1,4 +1,4 @@
-package winsvc
+package simplewinsvc
 
 import (
 	"time"
