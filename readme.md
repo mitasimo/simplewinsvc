@@ -1,0 +1,1 @@
+simplewinsvc is the Go library fo creating simple Windows service

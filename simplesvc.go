@@ -6,32 +6,31 @@ import (
 	"golang.org/x/sys/windows/svc"
 )
 
-// Starter is
-type Starter interface {
+// Service is an interface that must be implemented by an object to run as a Windows service
+//
+// Start must start the service in a non-blocking way
+// Stop is intended for stopping the service
+type Service interface {
 	Start() error
-}
-
-// Stopper is
-type Stopper interface {
 	Stop() error
 }
 
-// Run -
-func Run(svcName string, starter Starter, stopper Stopper) error {
+// Run accesses the Windows service Manager to start the service
+func Run(svcName string, service Service) error {
 
-	return svc.Run(svcName, wrapperHandler{starter, stopper})
+	return svc.Run(svcName, serviceHandler{service})
 }
 
-type wrapperHandler struct {
-	starter Starter
-	stopper Stopper
+type serviceHandler struct {
+	Service
 }
 
-func (wh wrapperHandler) Execute(args []string, changes <-chan svc.ChangeRequest, status chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
+// Execute implements the svc.Handler interface
+func (wh serviceHandler) Execute(args []string, changes <-chan svc.ChangeRequest, status chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
 
 	status <- svc.Status{State: svc.StartPending}
 
-	err := wh.starter.Start()
+	err := wh.Start()
 	if err != nil {
 		status <- svc.Status{State: svc.Stopped}
 		return
@@ -53,7 +52,7 @@ loop:
 			status <- c.CurrentStatus
 		case svc.Stop, svc.Shutdown:
 			status <- svc.Status{State: svc.StopPending}
-			err = wh.stopper.Stop()
+			err = wh.Stop()
 			break loop
 		default:
 			status <- c.CurrentStatus
